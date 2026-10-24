@@ -11,5 +11,4 @@ class AlcadaApplicationTests {
 	@Test
 	void contextLoads() {
 	}
-
 }
