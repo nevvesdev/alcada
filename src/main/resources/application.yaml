@@ -1,3 +1,26 @@
 spring:
   application:
     name: alcada
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/alcada}
+    username: ${DB_USERNAME:alcada}
+    password: ${DB_PASSWORD:alcada}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+
+server:
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
