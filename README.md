@@ -84,7 +84,7 @@ Testes (requerem Docker em execução):
 ## Roadmap
 
 - [x] Fase 0: Scaffold, infraestrutura local e CI
-- [ ] Fase 1: Domínio: solicitação, máquina de estados e regras
+- [x] Fase 1: Domínio: solicitação, máquina de estados e regras
 - [ ] Fase 2: Aplicação: casos de uso, portas e orquestrador da saga
 - [ ] Fase 3: Persistência: Flyway, JPA e saga state
 - [ ] Fase 4: Bureau simulado, timeout e retry
