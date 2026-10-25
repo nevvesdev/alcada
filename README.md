@@ -57,6 +57,14 @@ flowchart TB
     domain["domain (entidades, value objects, regras)"]
 ```
 
+## Garantias da saga
+
+- **Retomável:** o orquestrador decide o próximo passo pelo status persistido, então uma solicitação interrompida continua de onde parou.
+- **Idempotente na entrada:** a mesma chave com o mesmo payload devolve a solicitação existente; a mesma chave com payload diferente é recusada.
+- **Portas externas idempotentes:** `reserve`, `confirm` e `release` podem ser repetidos com segurança por identificador da solicitação.
+- **Compensação explícita:** falha na confirmação do limite libera a reserva antes de rejeitar; se a liberação falhar, a solicitação permanece em `LIMIT_RESERVED` para nova tentativa.
+- **Revisão manual:** a saga pausa em `UNDER_REVIEW` até a aprovação ou a negação.
+
 ## Stack
 
 Java 21, Spring Boot 4, Spring Data JPA, PostgreSQL, Flyway, Testcontainers, Docker.
@@ -85,7 +93,7 @@ Testes (requerem Docker em execução):
 
 - [x] Fase 0: Scaffold, infraestrutura local e CI
 - [x] Fase 1: Domínio: solicitação, máquina de estados e regras
-- [ ] Fase 2: Aplicação: casos de uso, portas e orquestrador da saga
+- [x] Fase 2: Aplicação: casos de uso, portas e orquestrador da saga
 - [ ] Fase 3: Persistência: Flyway, JPA e saga state
 - [ ] Fase 4: Bureau simulado, timeout e retry
 - [ ] Fase 5: Outbox e publicação de eventos
