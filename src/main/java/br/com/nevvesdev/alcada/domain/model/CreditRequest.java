@@ -25,15 +25,23 @@ public final class CreditRequest {
                           Cpf cpf,
                           Money requestedAmount,
                           Money declaredIncome,
-                          Instant createdAt) {
+                          CreditRequestStatus status,
+                          CreditScore creditScore,
+                          RiskDecision riskDecision,
+                          RejectionReason rejectionReason,
+                          Instant createdAt,
+                          Instant updatedAt) {
         this.id = id;
         this.idempotencyKey = idempotencyKey;
         this.cpf = cpf;
         this.requestedAmount = requestedAmount;
         this.declaredIncome = declaredIncome;
+        this.status = status;
+        this.creditScore = creditScore;
+        this.riskDecision = riskDecision;
+        this.rejectionReason = rejectionReason;
         this.createdAt = createdAt;
-        this.updatedAt = createdAt;
-        this.status = CreditRequestStatus.PENDING;
+        this.updatedAt = updatedAt;
     }
 
     public static CreditRequest open(CreditRequestId id,
@@ -51,7 +59,34 @@ public final class CreditRequest {
         if (requestedAmount.isZero()) {
             throw new DomainValidationException("Valor solicitado deve ser maior que zero");
         }
-        return new CreditRequest(id, idempotencyKey, cpf, requestedAmount, declaredIncome, now);
+        return new CreditRequest(
+                id, idempotencyKey, cpf, requestedAmount, declaredIncome,
+                CreditRequestStatus.PENDING, null, null, null, now, now);
+    }
+
+    public static CreditRequest restore(CreditRequestId id,
+                                        IdempotencyKey idempotencyKey,
+                                        Cpf cpf,
+                                        Money requestedAmount,
+                                        Money declaredIncome,
+                                        CreditRequestStatus status,
+                                        CreditScore creditScore,
+                                        RiskDecision riskDecision,
+                                        RejectionReason rejectionReason,
+                                        Instant createdAt,
+                                        Instant updatedAt) {
+        Objects.requireNonNull(id, "id");
+        Objects.requireNonNull(idempotencyKey, "idempotencyKey");
+        Objects.requireNonNull(cpf, "cpf");
+        Objects.requireNonNull(requestedAmount, "requestedAmount");
+        Objects.requireNonNull(declaredIncome, "declaredIncome");
+        Objects.requireNonNull(status, "status");
+        Objects.requireNonNull(createdAt, "createdAt");
+        Objects.requireNonNull(updatedAt, "updatedAt");
+        validateRestoredState(status, creditScore, riskDecision, rejectionReason, createdAt, updatedAt);
+        return new CreditRequest(
+                id, idempotencyKey, cpf, requestedAmount, declaredIncome,
+                status, creditScore, riskDecision, rejectionReason, createdAt, updatedAt);
     }
 
     public void registerBureauScore(CreditScore score, Instant now) {
@@ -161,6 +196,50 @@ public final class CreditRequest {
         if (riskDecision == null || !riskDecision.requiresManualReview()) {
             throw new InvalidStateTransitionException("Decisão de risco não exige revisão manual");
         }
+    }
+
+    private static void validateRestoredState(CreditRequestStatus status,
+                                              CreditScore creditScore,
+                                              RiskDecision riskDecision,
+                                              RejectionReason rejectionReason,
+                                              Instant createdAt,
+                                              Instant updatedAt) {
+        if (requiresScore(status) && creditScore == null) {
+            throw inconsistent("status " + status + " exige score do bureau");
+        }
+        if (requiresDecision(status) && riskDecision == null) {
+            throw inconsistent("status " + status + " exige decisão de risco");
+        }
+        if (status == CreditRequestStatus.PENDING && (creditScore != null || riskDecision != null)) {
+            throw inconsistent("solicitação pendente não pode ter score nem decisão de risco");
+        }
+        if (status == CreditRequestStatus.REJECTED && rejectionReason == null) {
+            throw inconsistent("solicitação rejeitada exige motivo");
+        }
+        if (status != CreditRequestStatus.REJECTED && rejectionReason != null) {
+            throw inconsistent("motivo de rejeição só é permitido em solicitação rejeitada");
+        }
+        if (updatedAt.isBefore(createdAt)) {
+            throw inconsistent("data de atualização anterior à data de criação");
+        }
+    }
+
+    private static boolean requiresScore(CreditRequestStatus status) {
+        return switch (status) {
+            case BUREAU_CHECKED, RISK_ANALYZED, UNDER_REVIEW, LIMIT_RESERVED, APPROVED -> true;
+            case PENDING, REJECTED -> false;
+        };
+    }
+
+    private static boolean requiresDecision(CreditRequestStatus status) {
+        return switch (status) {
+            case RISK_ANALYZED, UNDER_REVIEW, LIMIT_RESERVED, APPROVED -> true;
+            case PENDING, BUREAU_CHECKED, REJECTED -> false;
+        };
+    }
+
+    private static DomainValidationException inconsistent(String detail) {
+        return new DomainValidationException("Estado persistido inconsistente: " + detail);
     }
 
     @Override
