@@ -24,3 +24,33 @@ management:
     health:
       probes:
         enabled: true
+
+alcada:
+  bureau:
+    base-url: ${BUREAU_BASE_URL:http://localhost:8089}
+    connect-timeout: 1s
+    read-timeout: 2s
+    retry:
+      max-attempts: 3
+      initial-backoff: 200ms
+      multiplier: 2.0
+    circuit-breaker:
+      failure-rate-threshold: 50
+      sliding-window-size: 10
+      minimum-number-of-calls: 5
+      open-state-duration: 30s
+      half-open-permitted-calls: 3
+  limits:
+    base-url: ${LIMITS_BASE_URL:http://localhost:8089}
+    connect-timeout: 1s
+    read-timeout: 2s
+    retry:
+      max-attempts: 3
+      initial-backoff: 200ms
+      multiplier: 2.0
+    circuit-breaker:
+      failure-rate-threshold: 50
+      sliding-window-size: 10
+      minimum-number-of-calls: 5
+      open-state-duration: 30s
+      half-open-permitted-calls: 3
