@@ -94,7 +94,7 @@ Testes (requerem Docker em execução):
 - [x] Fase 0: Scaffold, infraestrutura local e CI
 - [x] Fase 1: Domínio: solicitação, máquina de estados e regras
 - [x] Fase 2: Aplicação: casos de uso, portas e orquestrador da saga
-- [ ] Fase 3: Persistência: Flyway, JPA e saga state
+- [x] Fase 3: Persistência: Flyway, JPA e saga state
 - [ ] Fase 4: Bureau simulado, timeout e retry
 - [ ] Fase 5: Outbox e publicação de eventos
 - [ ] Fase 6: API REST e idempotência
