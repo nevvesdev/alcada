@@ -65,6 +65,28 @@ flowchart TB
 - **Compensação explícita:** falha na confirmação do limite libera a reserva antes de rejeitar; se a liberação falhar, a solicitação permanece em `LIMIT_RESERVED` para nova tentativa.
 - **Revisão manual:** a saga pausa em `UNDER_REVIEW` até a aprovação ou a negação.
 
+## Integrações e resiliência
+
+Os serviços externos são acessados por adaptadores HTTP das portas `CreditBureauPort` e `LimitReservationPort`.
+
+- **Timeouts** de conexão e de leitura configuráveis por serviço.
+- **Retry com backoff exponencial e jitter** apenas para falhas transitórias (timeout, conexão recusada, 5xx, 408 e 429).
+- **Circuit breaker** por serviço: com o circuito aberto a chamada falha rápido, sem retry.
+- **Erros de negócio (4xx)** não são reenviados e não contam para o circuit breaker.
+- **Idempotência:** `reserve` e `confirm` enviam o header `Idempotency-Key` com o identificador da solicitação, e `release` trata 404 como sucesso.
+
+Configuração em `application.yaml`, sobrescrevível por variáveis de ambiente:
+
+```yaml
+alcada:
+  bureau:
+    base-url: ${BUREAU_BASE_URL:http://localhost:8089}
+    read-timeout: 2s
+    retry:
+      max-attempts: 3
+      initial-backoff: 200ms
+```
+
 ## Stack
 
 Java 21, Spring Boot 4, Spring Data JPA, PostgreSQL, Flyway, Testcontainers, Docker.
@@ -95,7 +117,7 @@ Testes (requerem Docker em execução):
 - [x] Fase 1: Domínio: solicitação, máquina de estados e regras
 - [x] Fase 2: Aplicação: casos de uso, portas e orquestrador da saga
 - [x] Fase 3: Persistência: Flyway, JPA e saga state
-- [ ] Fase 4: Bureau simulado, timeout e retry
+- [x] Fase 4: Bureau simulado, timeout e retry
 - [ ] Fase 5: Outbox e publicação de eventos
 - [ ] Fase 6: API REST e idempotência
 - [ ] Fase 7: Hardening: Docker, métricas, cobertura e README final
