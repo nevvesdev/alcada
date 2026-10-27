@@ -56,7 +56,7 @@ class JpaCreditRequestRepositoryTest {
         repository.save(request);
 
         CreditRequest loaded = repository.findById(request.id()).orElseThrow();
-        assertThat(loaded).usingRecursiveComparison().isEqualTo(request);
+        assertThat(loaded).usingRecursiveComparison().ignoringFields("domainEvents").isEqualTo(request);
     }
 
     @Test
@@ -78,7 +78,7 @@ class JpaCreditRequestRepositoryTest {
 
         CreditRequest loaded = repository.findById(request.id()).orElseThrow();
         assertThat(loaded.status()).isEqualTo(CreditRequestStatus.APPROVED);
-        assertThat(loaded).usingRecursiveComparison().isEqualTo(request);
+        assertThat(loaded).usingRecursiveComparison().ignoringFields("domainEvents").isEqualTo(request);
         assertThat(springData.count()).isEqualTo(1);
     }
 
@@ -106,7 +106,7 @@ class JpaCreditRequestRepositoryTest {
         repository.save(request);
 
         CreditRequest loaded = repository.findById(request.id()).orElseThrow();
-        assertThat(loaded).usingRecursiveComparison().isEqualTo(request);
+        assertThat(loaded).usingRecursiveComparison().ignoringFields("domainEvents").isEqualTo(request);
     }
 
     @Test

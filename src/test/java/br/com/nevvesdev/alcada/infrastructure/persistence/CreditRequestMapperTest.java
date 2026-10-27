@@ -33,7 +33,7 @@ class CreditRequestMapperTest {
     private static void assertRoundTrip(CreditRequest original) {
         CreditRequest restored = CreditRequestMapper.toDomain(CreditRequestMapper.toEntity(original));
 
-        assertThat(restored).usingRecursiveComparison().isEqualTo(original);
+        assertThat(restored).usingRecursiveComparison().ignoringFields("domainEvents").isEqualTo(original);
     }
 
     @Test

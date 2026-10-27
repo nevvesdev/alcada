@@ -4,6 +4,8 @@ import br.com.nevvesdev.alcada.domain.exception.DomainValidationException;
 import br.com.nevvesdev.alcada.domain.exception.InvalidStateTransitionException;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 public final class CreditRequest {
@@ -14,6 +16,7 @@ public final class CreditRequest {
     private final Money requestedAmount;
     private final Money declaredIncome;
     private final Instant createdAt;
+    private final List<DomainEvent> domainEvents = new ArrayList<>();
     private CreditRequestStatus status;
     private CreditScore creditScore;
     private RiskDecision riskDecision;
@@ -117,12 +120,22 @@ public final class CreditRequest {
 
     public void approve(Instant now) {
         transitionTo(CreditRequestStatus.APPROVED, now);
+        domainEvents.add(new CreditLineApproved(id, requestedAmount, now));
     }
 
     public void reject(RejectionReason reason, Instant now) {
         Objects.requireNonNull(reason, "reason");
         transitionTo(CreditRequestStatus.REJECTED, now);
         this.rejectionReason = reason;
+        domainEvents.add(new CreditLineRejected(id, reason, now));
+    }
+
+    public List<DomainEvent> domainEvents() {
+        return List.copyOf(domainEvents);
+    }
+
+    public void clearDomainEvents() {
+        domainEvents.clear();
     }
 
     public CreditRequestId id() {
