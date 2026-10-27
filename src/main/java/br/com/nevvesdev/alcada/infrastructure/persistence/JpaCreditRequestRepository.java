@@ -6,14 +6,12 @@ import br.com.nevvesdev.alcada.domain.model.CreditRequest;
 import br.com.nevvesdev.alcada.domain.model.CreditRequestId;
 import br.com.nevvesdev.alcada.domain.model.IdempotencyKey;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 @Repository
 public class JpaCreditRequestRepository implements CreditRequestRepository {
@@ -65,9 +63,4 @@ public class JpaCreditRequestRepository implements CreditRequestRepository {
                 .map(existing -> !existing.getId().equals(entity.getId()))
                 .orElse(false);
     }
-}
-
-interface SpringDataCreditRequestRepository extends JpaRepository<CreditRequestJpaEntity, UUID> {
-
-    Optional<CreditRequestJpaEntity> findByIdempotencyKey(String idempotencyKey);
 }
