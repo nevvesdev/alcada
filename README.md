@@ -87,6 +87,27 @@ alcada:
       initial-backoff: 200ms
 ```
 
+## Eventos, outbox e recuperação
+
+- **Eventos de domínio:** `CreditLineApproved` e `CreditLineRejected` nascem no agregado e não carregam dados pessoais.
+- **Outbox transacional:** o estado da solicitação e os eventos são gravados na mesma transação. O evento só é limpo do agregado depois do commit.
+- **Relay do outbox:** publica em lote usando `FOR UPDATE SKIP LOCKED`, então várias instâncias podem rodar sem publicar o mesmo evento ao mesmo tempo. A entrega é *at-least-once*: consumidores devem deduplicar pelo `eventId`. Eventos que esgotam as tentativas ficam na tabela para inspeção.
+- **Recuperação de sagas paradas:** solicitações em `PENDING`, `BUREAU_CHECKED`, `RISK_ANALYZED` ou `LIMIT_RESERVED` sem atualização recente são reivindicadas com um *lease* (`claimed_until`) e retomadas pelo orquestrador. `UNDER_REVIEW` fica de fora, pois aguarda decisão humana.
+- **Jobs agendados:** controlados por `alcada.jobs.enabled`, com intervalos configuráveis em `application.yaml`.
+
+```yaml
+alcada:
+  jobs:
+    enabled: true
+  recovery:
+    interval: PT30S
+    stale-after: PT1M
+    lease: PT2M
+  outbox:
+    interval: PT2S
+    max-attempts: 10
+```
+
 ## Stack
 
 Java 21, Spring Boot 4, Spring Data JPA, PostgreSQL, Flyway, Testcontainers, Docker.
@@ -118,7 +139,7 @@ Testes (requerem Docker em execução):
 - [x] Fase 2: Aplicação: casos de uso, portas e orquestrador da saga
 - [x] Fase 3: Persistência: Flyway, JPA e saga state
 - [x] Fase 4: Bureau simulado, timeout e retry
-- [ ] Fase 5: Outbox e publicação de eventos
+- [x] Fase 5: Outbox e publicação de eventos
 - [ ] Fase 6: API REST e idempotência
 - [ ] Fase 7: Hardening: Docker, métricas, cobertura e README final
 
