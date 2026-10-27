@@ -3,17 +3,23 @@ package br.com.nevvesdev.alcada.infrastructure.config;
 import br.com.nevvesdev.alcada.application.port.out.CreditBureauPort;
 import br.com.nevvesdev.alcada.application.port.out.CreditRequestRepository;
 import br.com.nevvesdev.alcada.application.port.out.LimitReservationPort;
+import br.com.nevvesdev.alcada.application.port.out.StalledCreditRequestPort;
 import br.com.nevvesdev.alcada.application.saga.CreditSagaOrchestrator;
 import br.com.nevvesdev.alcada.application.usecase.GetCreditRequestUseCase;
 import br.com.nevvesdev.alcada.application.usecase.OpenCreditRequestUseCase;
 import br.com.nevvesdev.alcada.application.usecase.ProcessCreditRequestUseCase;
+import br.com.nevvesdev.alcada.application.usecase.RecoverStalledRequestsUseCase;
 import br.com.nevvesdev.alcada.application.usecase.ResolveManualReviewUseCase;
 import br.com.nevvesdev.alcada.domain.service.RiskPolicy;
 import br.com.nevvesdev.alcada.infrastructure.bureau.HttpCreditBureauAdapter;
 import br.com.nevvesdev.alcada.infrastructure.limit.HttpLimitReservationAdapter;
+import br.com.nevvesdev.alcada.infrastructure.outbox.OutboxMessagePublisher;
+import br.com.nevvesdev.alcada.infrastructure.outbox.OutboxRelay;
+import br.com.nevvesdev.alcada.infrastructure.persistence.SpringDataOutboxEventRepository;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.transaction.PlatformTransactionManager;
 
 import java.time.Clock;
 
@@ -70,5 +76,33 @@ public class ApplicationConfig {
     ResolveManualReviewUseCase resolveManualReviewUseCase(CreditRequestRepository repository,
                                                           CreditSagaOrchestrator orchestrator) {
         return new ResolveManualReviewUseCase(repository, orchestrator);
+    }
+
+    @Bean
+    RecoverStalledRequestsUseCase recoverStalledRequestsUseCase(StalledCreditRequestPort stalledRequests,
+                                                                CreditRequestRepository repository,
+                                                                CreditSagaOrchestrator orchestrator,
+                                                                Clock clock,
+                                                                AlcadaProperties properties) {
+        RecoveryProperties recovery = properties.recovery();
+        return new RecoverStalledRequestsUseCase(
+                stalledRequests,
+                repository,
+                orchestrator,
+                clock,
+                recovery.staleAfter(),
+                recovery.lease(),
+                recovery.batchSize());
+    }
+
+    @Bean
+    OutboxRelay outboxRelay(SpringDataOutboxEventRepository repository,
+                            OutboxMessagePublisher publisher,
+                            PlatformTransactionManager transactionManager,
+                            Clock clock,
+                            AlcadaProperties properties) {
+        OutboxProperties outbox = properties.outbox();
+        return new OutboxRelay(
+                repository, publisher, transactionManager, clock, outbox.batchSize(), outbox.maxAttempts());
     }
 }

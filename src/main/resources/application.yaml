@@ -54,3 +54,16 @@ alcada:
       minimum-number-of-calls: 5
       open-state-duration: 30s
       half-open-permitted-calls: 3
+  jobs:
+    enabled: true
+  recovery:
+    initial-delay: PT30S
+    interval: PT30S
+    stale-after: PT1M
+    lease: PT2M
+    batch-size: 20
+  outbox:
+    initial-delay: PT5S
+    interval: PT2S
+    batch-size: 50
+    max-attempts: 10
