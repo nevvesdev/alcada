@@ -84,7 +84,10 @@ public final class StubHttpServer implements AutoCloseable {
     }
 
     public StubHttpServer onPattern(String method, String pathRegex, Route route) {
-        patternRoutes.add(new PatternRoute(method, Pattern.compile(pathRegex), new RegisteredRoute(route, new AtomicInteger())));
+        patternRoutes.removeIf(existing -> existing.method().equals(method)
+                && existing.pathPattern().pattern().equals(pathRegex));
+        patternRoutes.add(new PatternRoute(
+                method, Pattern.compile(pathRegex), new RegisteredRoute(route, new AtomicInteger())));
         return this;
     }
 
