@@ -18,6 +18,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Pattern;
 
 public final class StubHttpServer implements AutoCloseable {
 
@@ -53,10 +54,14 @@ public final class StubHttpServer implements AutoCloseable {
     private record RegisteredRoute(Route route, AtomicInteger calls) {
     }
 
+    private record PatternRoute(String method, Pattern pathPattern, RegisteredRoute registered) {
+    }
+
     private final HttpServer server;
     private final ExecutorService executor = Executors.newCachedThreadPool();
     private final List<RecordedRequest> requests = new CopyOnWriteArrayList<>();
     private final Map<String, RegisteredRoute> routes = new ConcurrentHashMap<>();
+    private final List<PatternRoute> patternRoutes = new CopyOnWriteArrayList<>();
 
     public StubHttpServer() {
         try {
@@ -78,6 +83,21 @@ public final class StubHttpServer implements AutoCloseable {
         return on(method, path, (request, callNumber) -> response);
     }
 
+    public StubHttpServer onPattern(String method, String pathRegex, Route route) {
+        patternRoutes.add(new PatternRoute(method, Pattern.compile(pathRegex), new RegisteredRoute(route, new AtomicInteger())));
+        return this;
+    }
+
+    public StubHttpServer respondPattern(String method, String pathRegex, Response response) {
+        return onPattern(method, pathRegex, (request, callNumber) -> response);
+    }
+
+    public void reset() {
+        routes.clear();
+        patternRoutes.clear();
+        requests.clear();
+    }
+
     public String baseUrl() {
         return "http://" + server.getAddress().getHostString() + ":" + server.getAddress().getPort();
     }
@@ -90,6 +110,13 @@ public final class StubHttpServer implements AutoCloseable {
         return requests.size();
     }
 
+    public long countRequests(String method, String pathRegex) {
+        Pattern pattern = Pattern.compile(pathRegex);
+        return requests.stream()
+                .filter(request -> request.method().equals(method) && pattern.matcher(request.path()).matches())
+                .count();
+    }
+
     @Override
     public void close() {
         server.stop(0);
@@ -99,12 +126,24 @@ public final class StubHttpServer implements AutoCloseable {
     private void dispatch(HttpExchange exchange) throws IOException {
         RecordedRequest request = record(exchange);
         requests.add(request);
-        RegisteredRoute registered = routes.get(key(request.method(), request.path()));
-        Response response = registered == null
-                ? Response.empty(404)
-                : registered.route().respond(request, registered.calls().incrementAndGet());
+        Response response = resolve(request);
         pause(response.delay());
         write(exchange, response);
+    }
+
+    private Response resolve(RecordedRequest request) {
+        RegisteredRoute exact = routes.get(key(request.method(), request.path()));
+        if (exact != null) {
+            return exact.route().respond(request, exact.calls().incrementAndGet());
+        }
+        for (PatternRoute patternRoute : patternRoutes) {
+            if (patternRoute.method().equals(request.method())
+                    && patternRoute.pathPattern().matcher(request.path()).matches()) {
+                RegisteredRoute registered = patternRoute.registered();
+                return registered.route().respond(request, registered.calls().incrementAndGet());
+            }
+        }
+        return Response.empty(404);
     }
 
     private static RecordedRequest record(HttpExchange exchange) throws IOException {
