@@ -15,6 +15,13 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+  wiremock:
+    image: wiremock/wiremock:3.9.1
+    container_name: alcada-wiremock
+    ports:
+      - "8089:8080"
+    volumes:
+      - ./docker/wiremock/mappings:/home/wiremock/mappings
 
 volumes:
   alcada-postgres-data:
