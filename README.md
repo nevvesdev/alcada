@@ -108,6 +108,44 @@ alcada:
     max-attempts: 10
 ```
 
+## API
+
+Documentação interativa em `http://localhost:8080/swagger-ui.html` (OpenAPI em `/v3/api-docs`).
+
+| Método | Caminho | Descrição |
+|---|---|---|
+| POST | `/api/v1/credit-requests` | Abre a solicitação e executa a saga. Exige o header `Idempotency-Key`. |
+| GET | `/api/v1/credit-requests/{id}` | Consulta o estado da solicitação. |
+| POST | `/api/v1/credit-requests/{id}/review/approve` | Aprova uma solicitação em revisão manual. |
+| POST | `/api/v1/credit-requests/{id}/review/deny` | Nega uma solicitação em revisão manual. |
+
+Respostas do `POST`: `201` quando a saga termina, `200` em repetição idempotente, `202` quando a infraestrutura interrompe a saga (a recuperação conclui depois). Erros seguem o formato `ProblemDetail` (RFC 7807) com um campo `code` estável. O CPF só aparece mascarado.
+
+## Demonstração
+
+Suba tudo (o WireMock simula o bureau e o serviço de limite na porta 8089):
+
+```bash
+docker-compose up -d
+./mvnw spring-boot:run
+```
+
+```bash
+curl -i -X POST http://localhost:8080/api/v1/credit-requests \
+  -H 'Content-Type: application/json' \
+  -H 'Idempotency-Key: demo-001' \
+  -d '{"cpf":"529.982.247-25","requestedAmount":5000,"declaredIncome":4000}'
+```
+
+| CPF | Cenário |
+|---|---|
+| `529.982.247-25` | Score 720: aprovada |
+| `111.444.777-35` | Score 300: rejeitada por score baixo |
+| `123.456.789-09` | Score 500: segue para revisão manual |
+| `935.411.347-80` | Bureau indisponível: retries e rejeição |
+
+Repita o mesmo `curl` com a mesma chave para ver a resposta idempotente (`200`). Para forçar a recusa do serviço de limite, solicite um valor acima de 100.000 com renda compatível. Os eventos aparecem nos logs da aplicação como `Evento publicado`.
+
 ## Stack
 
 Java 21, Spring Boot 4, Spring Data JPA, PostgreSQL, Flyway, Testcontainers, Docker.
@@ -140,7 +178,7 @@ Testes (requerem Docker em execução):
 - [x] Fase 3: Persistência: Flyway, JPA e saga state
 - [x] Fase 4: Bureau simulado, timeout e retry
 - [x] Fase 5: Outbox e publicação de eventos
-- [ ] Fase 6: API REST e idempotência
+- [x] Fase 6: API REST e idempotência
 - [ ] Fase 7: Hardening: Docker, métricas, cobertura e README final
 
 ## 👨‍💻 Desenvolvido por
