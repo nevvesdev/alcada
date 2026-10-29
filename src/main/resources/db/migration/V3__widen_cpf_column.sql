@@ -1,0 +1,1 @@
+ALTER TABLE credit_request ALTER COLUMN cpf TYPE VARCHAR(128);

@@ -9,6 +9,7 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Convert;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -25,7 +26,8 @@ public class CreditRequestJpaEntity {
     @Column(name = "idempotency_key", nullable = false, length = 128)
     private String idempotencyKey;
 
-    @Column(name = "cpf", nullable = false, length = 11)
+    @Convert(converter = CpfAttributeConverter.class)
+    @Column(name = "cpf", nullable = false, length = 128)
     private String cpf;
 
     @Column(name = "requested_amount", nullable = false, precision = 19, scale = 2)

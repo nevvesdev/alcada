@@ -72,6 +72,8 @@ alcada:
     interval: PT2S
     batch-size: 50
     max-attempts: 10
+  security:
+    cpf-secret: ${ALCADA_CPF_SECRET:dev-only-secret-change-me}
 
 logging:
   pattern:
