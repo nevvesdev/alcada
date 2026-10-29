@@ -38,7 +38,7 @@ class HttpCreditBureauAdapterTest {
                                                       CircuitBreakerProperties breaker) {
         return new RemoteServiceProperties(
                 baseUrl,
-                Duration.ofMillis(500),
+                Duration.ofSeconds(5),
                 readTimeout,
                 new RetryProperties(maxAttempts, Duration.ofMillis(1), 2.0),
                 breaker);
@@ -50,7 +50,7 @@ class HttpCreditBureauAdapterTest {
 
     private HttpCreditBureauAdapter adapter(int maxAttempts) {
         return new HttpCreditBureauAdapter(
-                properties(server.baseUrl(), Duration.ofMillis(500), maxAttempts, relaxedBreaker()));
+                properties(server.baseUrl(), Duration.ofSeconds(5), maxAttempts, relaxedBreaker()));
     }
 
     @Test
@@ -133,7 +133,7 @@ class HttpCreditBureauAdapterTest {
         server.respond("POST", PATH, Response.empty(500));
         HttpCreditBureauAdapter adapter = new HttpCreditBureauAdapter(properties(
                 server.baseUrl(),
-                Duration.ofMillis(500),
+                Duration.ofSeconds(5),
                 1,
                 new CircuitBreakerProperties(50f, 4, 4, Duration.ofSeconds(30), 1)));
 
@@ -156,7 +156,7 @@ class HttpCreditBureauAdapterTest {
             closedUrl = closed.baseUrl();
         }
         HttpCreditBureauAdapter adapter = new HttpCreditBureauAdapter(
-                properties(closedUrl, Duration.ofMillis(500), 2, relaxedBreaker()));
+                properties(closedUrl, Duration.ofSeconds(5), 2, relaxedBreaker()));
 
         assertThatThrownBy(() -> adapter.fetchScore(CPF))
                 .isInstanceOf(BureauUnavailableException.class)

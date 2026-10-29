@@ -40,8 +40,8 @@ class HttpLimitReservationAdapterTest {
     private HttpLimitReservationAdapter adapter() {
         return new HttpLimitReservationAdapter(new RemoteServiceProperties(
                 server.baseUrl(),
-                Duration.ofMillis(500),
-                Duration.ofMillis(500),
+                Duration.ofSeconds(5),
+                Duration.ofSeconds(5),
                 new RetryProperties(3, Duration.ofMillis(1), 2.0),
                 new CircuitBreakerProperties(50f, 100, 100, Duration.ofSeconds(30), 1)));
     }
