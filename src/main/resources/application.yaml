@@ -72,3 +72,7 @@ alcada:
     interval: PT2S
     batch-size: 50
     max-attempts: 10
+
+logging:
+  pattern:
+    level: "%5p [%X{correlationId:-}]"

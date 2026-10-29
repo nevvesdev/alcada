@@ -1,0 +1,8 @@
+logging:
+  structured:
+    format:
+      console: logstash
+
+alcada:
+  security:
+    cpf-secret: ${ALCADA_CPF_SECRET}
