@@ -20,4 +20,8 @@ public interface SpringDataOutboxEventRepository extends JpaRepository<OutboxEve
             """, nativeQuery = true)
     List<OutboxEventJpaEntity> lockPending(@Param("batchSize") int batchSize,
                                            @Param("maxAttempts") int maxAttempts);
+
+    long countByPublishedAtIsNullAndAttemptsLessThan(int attempts);
+
+    long countByPublishedAtIsNullAndAttemptsGreaterThanEqual(int attempts);
 }
