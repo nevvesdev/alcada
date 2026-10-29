@@ -5,6 +5,7 @@ import br.com.nevvesdev.alcada.application.port.out.CreditRequestRepository;
 import br.com.nevvesdev.alcada.domain.model.CreditRequest;
 import br.com.nevvesdev.alcada.domain.model.CreditRequestId;
 import br.com.nevvesdev.alcada.domain.model.IdempotencyKey;
+import br.com.nevvesdev.alcada.infrastructure.metrics.CreditRequestMetrics;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -18,13 +19,16 @@ public class JpaCreditRequestRepository implements CreditRequestRepository {
 
     private final SpringDataCreditRequestRepository creditRequests;
     private final SpringDataOutboxEventRepository outboxEvents;
+    private final CreditRequestMetrics metrics;
     private final TransactionTemplate transactionTemplate;
 
     public JpaCreditRequestRepository(SpringDataCreditRequestRepository creditRequests,
                                       SpringDataOutboxEventRepository outboxEvents,
+                                      CreditRequestMetrics metrics,
                                       PlatformTransactionManager transactionManager) {
         this.creditRequests = creditRequests;
         this.outboxEvents = outboxEvents;
+        this.metrics = metrics;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
@@ -45,6 +49,7 @@ public class JpaCreditRequestRepository implements CreditRequestRepository {
             }
             throw exception;
         }
+        request.domainEvents().forEach(metrics::recordOutcome);
         request.clearDomainEvents();
     }
 
