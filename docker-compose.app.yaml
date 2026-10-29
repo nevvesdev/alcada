@@ -1,0 +1,17 @@
+services:
+  alcada:
+    build: .
+    container_name: alcada-app
+    depends_on:
+      - postgres
+      - wiremock
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/alcada
+      DB_USERNAME: alcada
+      DB_PASSWORD: alcada
+      BUREAU_BASE_URL: http://wiremock:8080
+      LIMITS_BASE_URL: http://wiremock:8080
+      ALCADA_CPF_SECRET: demo-only-secret-change-me
+    ports:
+      - "8080:8080"
+    restart: on-failure
