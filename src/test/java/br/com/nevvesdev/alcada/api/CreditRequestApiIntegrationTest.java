@@ -15,6 +15,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import io.micrometer.core.instrument.MeterRegistry;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -64,6 +65,9 @@ class CreditRequestApiIntegrationTest {
 
     @Autowired
     private SpringDataOutboxEventRepository outbox;
+
+    @Autowired
+    private MeterRegistry meterRegistry;
 
     private final HttpClient http = HttpClient.newHttpClient();
 
@@ -226,5 +230,54 @@ class CreditRequestApiIntegrationTest {
 
         assertThat(response.statusCode()).isEqualTo(200);
         assertThat(response.body()).contains("/api/v1/credit-requests");
+    }
+
+    @Test
+    void shouldRecordBusinessAndInfrastructureMetrics() throws Exception {
+        HttpResponse<String> response = create("e2e-metrics", APPROVED_CPF);
+
+        assertThat(response.statusCode()).isEqualTo(201);
+        assertThat(meterRegistry.get("alcada.credit.request.outcome")
+                .tag("outcome", "approved").counter().count()).isGreaterThanOrEqualTo(1.0);
+        assertThat(meterRegistry.get("alcada.outbox.pending").gauge().value()).isGreaterThanOrEqualTo(1.0);
+        assertThat(meterRegistry.getMeters()).anyMatch(meter ->
+                meter.getId().getName().startsWith("resilience4j.circuitbreaker")
+                        && "bureau".equals(meter.getId().getTag("name")));
+    }
+
+    @Test
+    void shouldEchoTheProvidedCorrelationId() throws Exception {
+        HttpRequest request = HttpRequest
+                .newBuilder(URI.create(baseUrl() + "/api/v1/credit-requests/" + java.util.UUID.randomUUID()))
+                .header("X-Correlation-Id", "trace-123")
+                .GET()
+                .build();
+
+        HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
+
+        assertThat(response.headers().firstValue("X-Correlation-Id")).contains("trace-123");
+    }
+
+    @Test
+    void shouldGenerateCorrelationIdWhenMissing() throws Exception {
+        HttpResponse<String> response = get(baseUrl() + "/api/v1/credit-requests/" + java.util.UUID.randomUUID());
+
+        assertThat(response.headers().firstValue("X-Correlation-Id")).isPresent();
+    }
+
+    @Test
+    void shouldRejectOversizedPayload() throws Exception {
+        String body = "{\"cpf\":\"" + "9".repeat(20000) + "\"}";
+        HttpRequest request = HttpRequest.newBuilder(URI.create(baseUrl() + "/api/v1/credit-requests"))
+                .header("Content-Type", "application/json")
+                .header("Idempotency-Key", "e2e-too-large")
+                .POST(HttpRequest.BodyPublishers.ofString(body))
+                .build();
+
+        HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
+
+        assertThat(response.statusCode()).isEqualTo(413);
+        assertThat(response.body()).contains("\"code\":\"PAYLOAD_TOO_LARGE\"");
+        assertThat(creditRequests.count()).isZero();
     }
 }
