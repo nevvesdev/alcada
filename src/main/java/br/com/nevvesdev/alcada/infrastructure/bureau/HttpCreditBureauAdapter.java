@@ -11,6 +11,7 @@ import br.com.nevvesdev.alcada.infrastructure.http.RemoteServiceProperties;
 import br.com.nevvesdev.alcada.infrastructure.http.ResilientCaller;
 import br.com.nevvesdev.alcada.infrastructure.http.RestClients;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.http.MediaType;
 import org.springframework.web.client.RestClient;
 
@@ -22,8 +23,12 @@ public final class HttpCreditBureauAdapter implements CreditBureauPort {
     private final ResilientCaller caller;
 
     public HttpCreditBureauAdapter(RemoteServiceProperties properties) {
+        this(properties, null);
+    }
+
+    public HttpCreditBureauAdapter(RemoteServiceProperties properties, MeterRegistry meterRegistry) {
         this.restClient = RestClients.create(properties);
-        this.caller = new ResilientCaller("bureau", properties.retry(), properties.circuitBreaker());
+        this.caller = new ResilientCaller("bureau", properties.retry(), properties.circuitBreaker(), meterRegistry);
     }
 
     @Override

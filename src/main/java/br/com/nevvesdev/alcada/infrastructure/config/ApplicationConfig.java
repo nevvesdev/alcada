@@ -20,6 +20,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.PlatformTransactionManager;
+import io.micrometer.core.instrument.MeterRegistry;
 
 import java.time.Clock;
 
@@ -38,13 +39,13 @@ public class ApplicationConfig {
     }
 
     @Bean
-    CreditBureauPort creditBureauPort(AlcadaProperties properties) {
-        return new HttpCreditBureauAdapter(properties.bureau());
+    CreditBureauPort creditBureauPort(AlcadaProperties properties, MeterRegistry meterRegistry) {
+        return new HttpCreditBureauAdapter(properties.bureau(), meterRegistry);
     }
 
     @Bean
-    LimitReservationPort limitReservationPort(AlcadaProperties properties) {
-        return new HttpLimitReservationAdapter(properties.limits());
+    LimitReservationPort limitReservationPort(AlcadaProperties properties, MeterRegistry meterRegistry) {
+        return new HttpLimitReservationAdapter(properties.limits(), meterRegistry);
     }
 
     @Bean

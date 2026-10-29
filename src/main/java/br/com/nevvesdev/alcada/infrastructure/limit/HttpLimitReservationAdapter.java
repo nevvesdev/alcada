@@ -13,6 +13,7 @@ import br.com.nevvesdev.alcada.infrastructure.http.RemoteServiceProperties;
 import br.com.nevvesdev.alcada.infrastructure.http.ResilientCaller;
 import br.com.nevvesdev.alcada.infrastructure.http.RestClients;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.http.MediaType;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
@@ -28,8 +29,12 @@ public final class HttpLimitReservationAdapter implements LimitReservationPort {
     private final ResilientCaller caller;
 
     public HttpLimitReservationAdapter(RemoteServiceProperties properties) {
+        this(properties, null);
+    }
+
+    public HttpLimitReservationAdapter(RemoteServiceProperties properties, MeterRegistry meterRegistry) {
         this.restClient = RestClients.create(properties);
-        this.caller = new ResilientCaller("limits", properties.retry(), properties.circuitBreaker());
+        this.caller = new ResilientCaller("limits", properties.retry(), properties.circuitBreaker(), meterRegistry);
     }
 
     @Override
